@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow Timer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1; /* Indigo */
+            --primary-hover: #4f46e5;
+            --accent: #38bdf8; /* Sky blue */
+            --danger: #ef4444;
+            --success: #22c55e;
+            --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 100px 20px 40px 20px;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            animation: fadeIn 0.6s ease-out;
+            position: relative;
+            flex: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mascot Styling */
+        .mascot-wrapper {
+            position: absolute;
+            top: -75px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+            animation: float 6s ease-in-out infinite;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .mascot-wrapper:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+        
+        /* Wing Styling */
+        .wing {
+            /* No transform-box needed if we use explicit pixel origins matching SVG coords */
+            opacity: 1; /* Visible by default now (behind body) */
+            transition: opacity 0.2s;
+        }
+
+        @keyframes float {
+            0% { transform: translateX(-50%) translateY(0px); }
+            50% { transform: translateX(-50%) translateY(-8px); }
+            100% { transform: translateX(-50%) translateY(0px); }
+        }
+
+        .mascot-eyes {
+            animation: blink 4s infinite;
+            transform-origin: center;
+        }
+
+        @keyframes blink {
+            0%, 96%, 100% { transform: scaleY(1); }
+            98% { transform: scaleY(0.1); }
+        }
+
+        /* Easter Egg Animation Classes */
+        /* 
+           Wings Pivot from "Shoulder" (Top of the oval).
+           Left Wing (cx=27, top=55): Origin 27px 55px.
+           Right Wing (cx=73, top=55): Origin 73px 55px.
+        */
+        .wing-flap-left { 
+            animation: flapL 0.4s ease-in-out infinite alternate; 
+            transform-origin: 27px 55px;
+        }
+        
+        .wing-flap-right { 
+            animation: flapR 0.4s ease-in-out infinite alternate; 
+            transform-origin: 73px 55px;
+        }
+        
+        .beak-talk { animation: talk 0.15s linear infinite; transform-origin: 50px 50px; }
+
+        /* Rotate UP/OUT */
+        @keyframes flapL { from { transform: rotate(0deg); } to { transform: rotate(50deg); } }
+        @keyframes flapR { from { transform: rotate(0deg); } to { transform: rotate(-50deg); } }
+        @keyframes talk { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(0.6); } }
+
+
+        /* Glassmorphism Card Style */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            text-align: center;
+            margin: 0 0 24px 0;
+            font-weight: 600;
+        }
+
+        /* Timer Styling */
+        .timer-wrapper {
+            position: relative;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .timer-display {
+            font-size: 4.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(99, 102, 241, 0.2);
+            transition: color 0.3s;
+        }
+        
+        .timer-display.negative {
+            background: none;
+            color: var(--danger);
+            -webkit-text-fill-color: var(--danger);
+            text-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.1);
+        }
+        
+        .status-badge.correction {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        /* Inputs */
+        .input-group { position: relative; margin-bottom: 20px; }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        
+        input::placeholder { color: rgba(148, 163, 184, 0.5); }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        button {
+            width: 100%;
+            cursor: pointer;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); }
+        
+        .btn-stop {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-stop:hover { background: rgba(255, 255, 255, 0.15); }
+
+        .btn-danger { 
+            background: transparent; 
+            color: var(--danger); 
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        .btn-danger:hover { opacity: 1; background: rgba(239, 68, 68, 0.1); }
+
+        /* Adjust Time Section */
+        .adjust-time {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .adjust-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Quick Chips Grid */
+        .quick-chips {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .btn-chip {
+            width: 100%;
+            padding: 6px;
+            height: 34px;
+            font-size: 0.8rem;
+            border: 1px solid transparent;
+            border-radius: 8px;
+        }
+
+        .chip-pos {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+        .chip-pos:hover { background: rgba(56, 189, 248, 0.25); border-color: var(--accent); }
+
+        .chip-neg {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        .chip-neg:hover { background: rgba(239, 68, 68, 0.25); border-color: var(--danger); }
+
+        .adjust-row { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center;
+        }
+        
+        .adjust-row input {
+            flex: 1;
+            min-width: 60px;
+        }
+
+        .btn-small {
+            width: auto;
+            padding: 0 16px;
+            height: 48px;
+            font-size: 0.9rem;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            white-space: nowrap; 
+        }
+        .btn-small:hover { background: rgba(56, 189, 248, 0.25); }
+
+        .btn-small-danger {
+            width: auto;
+            padding: 0 16px;
+            height: 48px;
+            font-size: 0.9rem;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            white-space: nowrap;
+        }
+        .btn-small-danger:hover { background: rgba(239, 68, 68, 0.25); }
+        
+        /* History List */
+        .history-header {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-top h2 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .stat-box {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .stat-box span {
+            color: var(--success);
+            font-weight: 600;
+            font-family: 'Monaco', 'Consolas', monospace;
+            display: block;
+            font-size: 0.9rem;
+            margin-top: 2px;
+        }
+        .stat-box:last-child { text-align: right; }
+        .stat-box:last-child span { color: var(--accent); }
+
+        .log-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-list::-webkit-scrollbar { width: 6px; }
+        .log-list::-webkit-scrollbar-track { background: transparent; }
+        .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .log-item:last-child { border-bottom: none; }
+
+        .log-info { flex: 1; overflow: hidden; }
+        .log-task { 
+            color: var(--text-main); 
+            font-weight: 500; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            margin-bottom: 4px;
+        }
+        .log-date { font-size: 0.75rem; color: var(--text-muted); }
+        
+        .log-time { 
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-weight: 600; 
+            color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-left: 12px;
+        }
+        .log-time.negative {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .empty-state { 
+            text-align: center; 
+            color: var(--text-muted); 
+            padding: 30px 0;
+            font-size: 0.9rem; 
+        }
+        
+        .btn-xs {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            height: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-muted);
+        }
+        .btn-xs:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+        
+        .btn-xs-danger {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            height: auto;
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--danger);
+        }
+        .btn-xs-danger:hover { background: rgba(239,68,68,0.1); }
+
+        /* Footer */
+        .footer-note {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+            text-align: center;
+        }
+
+        /* Game Overlay */
+        #gameOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        #gameCanvas {
+            background: #1e1b4b;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+        
+        .game-ui {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 600px;
+        }
+        
+        .game-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 10px 0;
+        }
+
+        .phase-indicator {
+            font-size: 0.9rem;
+            color: var(--success);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            min-height: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Tasky The Owl -->
+    <div class="mascot-wrapper" id="taskyMascot">
+        <svg width="100" height="80" viewBox="0 0 100 80">
+            <!-- Wings: Painted FIRST so they appear BEHIND the body. -->
+            <!-- Positioned slightly further out (27 and 73) so they are visible behind the 60px body -->
+            <ellipse class="wing wing-left" cx="27" cy="65" rx="6" ry="10" fill="#4f46e5" />
+            <ellipse class="wing wing-right" cx="73" cy="65" rx="6" ry="10" fill="#4f46e5" />
+
+            <!-- Body -->
+            <circle cx="50" cy="50" r="30" fill="#6366f1" />
+            
+            <!-- Ears -->
+            <path d="M30 30 L20 10 L45 25 Z" fill="#6366f1" />
+            <path d="M70 30 L80 10 L55 25 Z" fill="#6366f1" />
+            
+            <!-- Face Plate -->
+            <ellipse cx="50" cy="45" rx="25" ry="20" fill="#e0e7ff" />
+            
+            <!-- Eyes -->
+            <g class="mascot-eyes">
+                <circle cx="40" cy="42" r="7" fill="#1e1b4b" />
+                <circle cx="60" cy="42" r="7" fill="#1e1b4b" />
+                <circle cx="38" cy="40" r="2" fill="white" />
+                <circle cx="58" cy="40" r="2" fill="white" />
+            </g>
+            
+            <!-- Beak -->
+            <path id="mascotBeak" d="M47 50 L53 50 L50 56 Z" fill="#fbbf24" />
+            
+            <!-- Paws peeking over -->
+            <ellipse cx="35" cy="78" rx="8" ry="6" fill="#4f46e5" />
+            <ellipse cx="65" cy="78" rx="8" ry="6" fill="#4f46e5" />
+        </svg>
+    </div>
+
+    <!-- Main Tracker Card -->
+    <div class="card">
+        <h1>TaskFlow</h1>
+        
+        <div class="input-group">
+            <input type="text" id="taskName" placeholder="What are you working on?" autocomplete="off" />
+        </div>
+
+        <div class="timer-wrapper">
+            <div class="timer-display" id="display">00:00:00</div>
+            <div id="statusBadge" class="status-badge">Idle</div>
+        </div>
+
+        <div class="controls">
+            <!-- Play/Pause Buttons are swapped via JS -->
+            <button id="btnStart" class="btn-primary">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/></svg>
+                Start Focus
+            </button>
+            <button id="btnStop" class="btn-stop" style="display: none;">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>
+                Pause
+            </button>
+            
+            <button id="btnSave" class="btn-stop">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/></svg>
+                Finish & Save
+            </button>
+            
+            <button id="btnReset" class="btn-danger">Discard Timer</button>
+        </div>
+
+        <!-- Adjust Time Feature -->
+        <div class="adjust-time">
+            <div class="adjust-label">Quick Adjust (Minutes):</div>
+            
+            <!-- Quick Chips -->
+            <div class="quick-chips">
+                <button class="btn-chip chip-pos" onclick="quickAdd(5)">+5m</button>
+                <button class="btn-chip chip-pos" onclick="quickAdd(15)">+15m</button>
+                <button class="btn-chip chip-pos" onclick="quickAdd(30)">+30m</button>
+                <button class="btn-chip chip-pos" onclick="quickAdd(60)">+60m</button>
+                
+                <button class="btn-chip chip-neg" onclick="quickAdd(-5)">-5m</button>
+                <button class="btn-chip chip-neg" onclick="quickAdd(-15)">-15m</button>
+                <button class="btn-chip chip-neg" onclick="quickAdd(-30)">-30m</button>
+                <button class="btn-chip chip-neg" onclick="quickAdd(-60)">-60m</button>
+            </div>
+
+            <div class="adjust-label" style="margin-top:4px;">Custom Adjustment:</div>
+            <div class="adjust-row">
+                <input type="number" id="adjustMinutes" placeholder="Minutes" min="1" />
+                <button class="btn-small" id="btnAddTime">+ Add</button>
+                <button class="btn-small-danger" id="btnSubTime">- Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Card -->
+    <div class="card">
+        <div class="history-header">
+            <div class="header-top">
+                <h2>Recent Sessions</h2>
+                <div class="header-actions">
+                    <button class="btn-xs" id="btnExport">Export CSV</button>
+                    <button class="btn-xs-danger" id="btnClearHistory">Clear All</button>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-box">Total Today<span id="dailyTotalDisplay">00:00:00</span></div>
+                <div class="stat-box">Total All Time<span id="allTimeTotalDisplay">00:00:00</span></div>
+            </div>
+        </div>
+        <ul id="logList" class="log-list">
+            <!-- Logs go here -->
+        </ul>
+        <div id="emptyState" class="empty-state">No sessions recorded yet.</div>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="footer-note">
+        Created by Chris Pearce • 10/12/2025
+    </div>
+</div>
+
+<!-- Game Overlay -->
+<div id="gameOverlay">
+    <div class="game-ui">
+        <h2 style="color:white; margin:0;">Tasky's Flight</h2>
+        <div class="phase-indicator" id="phaseIndicator">PHASE 1: THE WOODS</div>
+        <div class="game-score">Score: <span id="scoreVal">0</span></div>
+        <p style="color:#94a3b8;">Use UP/DOWN arrows to dodge.</p>
+        <button id="btnExitGame" class="btn-xs-danger" style="margin-top:10px;">Exit Game</button>
+    </div>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+</div>
+
+<script>
+    let seconds = 0;
+    let interval = null;
+    let isRunning = false;
+
+    // DOM Elements
+    const display = document.getElementById('display');
+    const statusBadge = document.getElementById('statusBadge');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const btnReset = document.getElementById('btnReset');
+    const btnSave = document.getElementById('btnSave');
+    
+    const btnAddTime = document.getElementById('btnAddTime');
+    const btnSubTime = document.getElementById('btnSubTime');
+    
+    const taskInput = document.getElementById('taskName');
+    const adjustMinutesInput = document.getElementById('adjustMinutes');
+    const logList = document.getElementById('logList');
+    const emptyState = document.getElementById('emptyState');
+    const btnClearHistory = document.getElementById('btnClearHistory');
+    const btnExport = document.getElementById('btnExport');
+    
+    const dailyTotalDisplay = document.getElementById('dailyTotalDisplay');
+    const allTimeTotalDisplay = document.getElementById('allTimeTotalDisplay');
+    
+    // Mascot elements
+    // Fixed: Use correct ID matching HTML
+    const mascotWrapper = document.getElementById('taskyMascot');
+    const leftWing = document.querySelector('.wing-left');
+    const rightWing = document.querySelector('.wing-right');
+    const mascotBeak = document.getElementById('mascotBeak');
+
+    // Initialize
+    loadHistory();
+    updateDisplay();
+    document.title = "TaskFlow: Idle";
+
+    // Event Listeners
+    btnStart.addEventListener('click', startTimer);
+    btnStop.addEventListener('click', stopTimer);
+    btnReset.addEventListener('click', resetTimer);
+    
+    btnAddTime.addEventListener('click', () => adjustTime(1));
+    btnSubTime.addEventListener('click', () => adjustTime(-1));
+    
+    btnSave.addEventListener('click', saveSession);
+    btnClearHistory.addEventListener('click', clearHistory);
+    btnExport.addEventListener('click', exportCSV);
+    
+    // Mascot Click Interaction (Easter Egg 1 & 2)
+    mascotWrapper.addEventListener('click', () => {
+        const val = taskInput.value.toLowerCase().trim();
+        
+        if (val === "game" || val === "gaming") {
+            startGame();
+        } else {
+            triggerMascotAnimation();
+        }
+    });
+
+    // -------- MASCOT ANIMATION --------
+    function triggerMascotAnimation() {
+        leftWing.classList.add('wing-flap-left');
+        rightWing.classList.add('wing-flap-right');
+        mascotBeak.classList.add('beak-talk');
+        
+        setTimeout(() => {
+            leftWing.classList.remove('wing-flap-left');
+            rightWing.classList.remove('wing-flap-right');
+            mascotBeak.classList.remove('beak-talk');
+        }, 1500); // 3 flaps
+    }
+
+
+    // -------- GAME LOGIC --------
+    const overlay = document.getElementById('gameOverlay');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('scoreVal');
+    const phaseEl = document.getElementById('phaseIndicator');
+    const btnExit = document.getElementById('btnExitGame');
+
+    let gameLoop;
+    let score = 0;
+    let obstacles = [];
+    let playerY = 200;
+    let playerVel = 0;
+    const playerSize = 30;
+    let gameSpeed = 3;
+    let gameActive = false;
+    let frameCount = 0;
+    let gapCenter = 200; 
+    const gapSize = 120;
+    let currentPhase = 1;
+
+    btnExit.addEventListener('click', () => {
+        gameActive = false;
+        overlay.style.display = 'none';
+        cancelAnimationFrame(gameLoop);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!gameActive) return;
+        if (e.key === 'ArrowUp') playerVel = -5;
+        if (e.key === 'ArrowDown') playerVel = 5;
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (!gameActive) return;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') playerVel = 0;
+    });
+
+    function startGame() {
+        overlay.style.display = 'flex';
+        gameActive = true;
+        score = 0;
+        playerY = 200;
+        playerVel = 0;
+        obstacles = [];
+        gameSpeed = 4;
+        gapCenter = 200;
+        frameCount = 0;
+        scoreEl.innerText = score;
+        updateGame();
+    }
+    
+    // Draw Tasky Sideways (Cute Profile)
+    function drawSidewaysTasky(x, y, size) {
+        // Body (Horizontal Ellipse)
+        let gradient = ctx.createRadialGradient(x + size/2, y + size/2, size/4, x + size/2, y + size/2, size/2);
+        gradient.addColorStop(0, "#818cf8");
+        gradient.addColorStop(1, "#4f46e5");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(x + size/2, y + size/2, size/1.8, size/2.2, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // White Face Patch (Smaller cheek)
+        ctx.fillStyle = "#e0e7ff";
+        ctx.beginPath();
+        ctx.ellipse(x + size/2 + 2, y + size/2 + 4, size/4, size/5, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Eye (Single big eye in profile)
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(x + size - 8, y + size/2 - 5, 6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "#1e1b4b";
+        ctx.beginPath();
+        ctx.arc(x + size - 5, y + size/2 - 5, 2.5, 0, Math.PI*2);
+        ctx.fill();
+
+        // Beak (Pointing Right)
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath();
+        ctx.moveTo(x + size - 2, y + size/2);
+        ctx.lineTo(x + size + 8, y + size/2 + 3);
+        ctx.lineTo(x + size - 2, y + size/2 + 6);
+        ctx.fill();
+        
+        // Wing (Side view)
+        ctx.fillStyle = "#4338ca";
+        ctx.beginPath();
+        ctx.ellipse(x + size/2 - 5, y + size/2 + 5, size/3, size/4, -0.2, 0, Math.PI*2);
+        ctx.fill();
+    }
+    
+    function drawEnemyBird(x, y, size) {
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(x + size/2, y + size/2, 4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(x + size/2 - 2, y + size/2, 2, 0, Math.PI*2); 
+        ctx.fill();
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y + size/2);
+        ctx.lineTo(x - 5, y + size/2 + 3);
+        ctx.lineTo(x + 5, y + size/2 + 6);
+        ctx.fill();
+    }
+
+    function determinePhase(s) {
+        if (s < 3) return { id: 1, name: "PHASE 1: THE WOODS", speed: 3, rate: 0.02 };
+        if (s < 8) return { id: 2, name: "PHASE 2: DENSE FOREST", speed: 4, rate: 0.025 };
+        if (s < 15) return { id: 3, name: "PHASE 3: ANGRY BIRDS", speed: 5, rate: 0.03 };
+        return { id: 4, name: "PHASE 4: CHAOS", speed: 6 + Math.floor((s-15)/5), rate: 0.04 };
+    }
+
+    function isGapClear(newObs) {
+        if (obstacles.length === 0) return true;
+        const last = obstacles[obstacles.length - 1];
+        if (newObs.x - (last.x + last.w) < 180) return false;
+        return true;
+    }
+
+    function updateGame() {
+        if (!gameActive) return;
+        frameCount++;
+
+        // Phase & Speed Update
+        const phaseInfo = determinePhase(score);
+        currentPhase = phaseInfo.id;
+        phaseEl.innerText = phaseInfo.name;
+        
+        // Update global speed smoothly
+        let targetSpeed = 4 + (score * 0.15);
+        if(targetSpeed > 10) targetSpeed = 10;
+        gameSpeed = targetSpeed;
+
+        // Clear
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Player (Owl)
+        playerY += playerVel;
+        if (playerY < 0) playerY = 0;
+        if (playerY > canvas.height - playerSize) playerY = canvas.height - playerSize;
+        
+        drawSidewaysTasky(50, playerY, playerSize);
+
+        // --- SPAWN LOGIC ---
+        // Move gap center
+        gapCenter += (Math.random() - 0.5) * 50; 
+        if(gapCenter < 80) gapCenter = 80;
+        if(gapCenter > 320) gapCenter = 320;
+
+        let spawnRate = 80; 
+        if (score > 10) spawnRate = 60;
+        if (score > 20) spawnRate = 40;
+
+        if (frameCount % spawnRate === 0) {
+            let spawnBottom = true;
+            let spawnTop = false;
+            let spawnBird = false;
+
+            if (score > 5) spawnTop = true; 
+            if (score > 15 && Math.random() > 0.6) spawnBird = true; 
+
+            // Calculate Heights
+            let bottomTreeY = gapCenter + (gapSize/2);
+            let bottomTreeH = canvas.height - bottomTreeY;
+            let topTreeH = gapCenter - (gapSize/2);
+
+            // Bottom Tree
+            if (spawnBottom && bottomTreeH > 0) {
+                 obstacles.push({
+                    x: canvas.width,
+                    y: bottomTreeY,
+                    w: 40,
+                    h: bottomTreeH,
+                    type: 'tree',
+                    passed: false
+                });
+            }
+
+            // Top Tree
+            if (spawnTop && topTreeH > 0) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: 0,
+                    w: 40,
+                    h: topTreeH,
+                    type: 'tree',
+                    passed: false
+                });
+            }
+            
+            // Bird
+            if (spawnBird) {
+                obstacles.push({
+                    x: canvas.width + 50, 
+                    y: gapCenter - 10,
+                    w: 25,
+                    h: 20,
+                    type: 'bird',
+                    passed: false
+                });
+            }
+        }
+
+        // Update Obstacles - Reverse Loop to prevent flicker on splice
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i];
+            
+            // FIX: Trees move at global gameSpeed. Birds move slightly faster.
+            let moveSpeed = (obs.type === 'bird') ? gameSpeed + 2 : gameSpeed;
+            obs.x -= moveSpeed;
+            
+            // Draw
+            if (obs.type === 'tree') {
+                ctx.fillStyle = '#22c55e'; 
+                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                ctx.fillStyle = '#166534';
+                if(obs.y === 0) { 
+                     ctx.fillRect(obs.x + 10, obs.h - 10, 20, 10);
+                } else { 
+                     ctx.fillRect(obs.x + 10, obs.y, 20, 10);
+                }
+            } else {
+                drawEnemyBird(obs.x, obs.y, 25);
+            }
+            
+            // Collision
+            let pLeft = 50 - 18; // approx hitbox width
+            let pRight = 50 + 18;
+            let pTop = playerY - 15;
+            let pBottom = playerY + 15;
+
+            if (
+                pRight > obs.x &&
+                pLeft < obs.x + obs.w &&
+                pBottom > obs.y &&
+                pTop < obs.y + obs.h
+            ) {
+                gameActive = false;
+                alert(`Game Over! Score: ${score}`);
+                overlay.style.display = 'none';
+                return; // Stop processing this frame
+            }
+
+            // Scoring
+            if (!obs.passed && obs.x + obs.w < 50) {
+                score++;
+                obs.passed = true;
+                scoreEl.innerText = score;
+            }
+
+            // Cleanup
+            if (obs.x + obs.w < -50) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        gameLoop = requestAnimationFrame(updateGame);
+    }
+
+
+    // Timer Logic
+    function startTimer() {
+        if (isRunning) return;
+        isRunning = true;
+        interval = setInterval(() => {
+            seconds++;
+            updateDisplay();
+        }, 1000);
+        toggleButtons(true);
+        updateStatus(true);
+    }
+
+    function stopTimer() {
+        if (!isRunning) return;
+        isRunning = false;
+        clearInterval(interval);
+        toggleButtons(false);
+        updateStatus(false);
+    }
+
+    function resetTimer() {
+        if (seconds !== 0 && !confirm("Discard this timer? This cannot be undone.")) return;
+
+        stopTimer();
+        seconds = 0;
+        updateDisplay();
+        taskInput.value = "";
+        btnStart.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/></svg> Start Focus`;
+    }
+
+    // Adjustment Logic
+    function quickAdd(mins) {
+        seconds += mins * 60;
+        updateDisplay();
+    }
+
+    function adjustTime(multiplier) {
+        const mins = parseInt(adjustMinutesInput.value);
+        if (!isNaN(mins) && mins > 0) {
+            const shift = mins * 60 * multiplier;
+            seconds += shift;
+            updateDisplay();
+            adjustMinutesInput.value = '';
+        }
+    }
+
+    // Helper for consistent formatting
+    function formatDuration(totalSeconds) {
+        const isNegative = totalSeconds < 0;
+        const absSeconds = Math.abs(totalSeconds);
+        const h = Math.floor(absSeconds / 3600);
+        const m = Math.floor((absSeconds % 3600) / 60);
+        const s = absSeconds % 60;
+
+        return `${isNegative ? '-' : ''}${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateDisplay() {
+        display.textContent = formatDuration(seconds);
+
+        if (seconds < 0) {
+            display.classList.add('negative');
+            if(!isRunning) {
+                statusBadge.textContent = "Correction";
+                statusBadge.className = 'status-badge correction';
+            }
+        } else {
+            display.classList.remove('negative');
+            if(!isRunning && seconds === 0) {
+                statusBadge.className = 'status-badge';
+            }
+        }
+
+        if (isRunning) {
+            document.title = `(${display.textContent}) TaskFlow`;
+        } else {
+            document.title = "TaskFlow";
+        }
+    }
+
+    function updateStatus(active) {
+        statusBadge.className = 'status-badge';
+        if (active) {
+            statusBadge.textContent = "Focusing";
+            statusBadge.classList.add('active');
+        } else {
+            if (seconds < 0) {
+                statusBadge.textContent = "Correction";
+                statusBadge.classList.add('correction');
+            } else {
+                statusBadge.textContent = seconds > 0 ? "Paused" : "Idle";
+            }
+        }
+    }
+
+    function toggleButtons(running) {
+        if (running) {
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'flex';
+        } else {
+            btnStop.style.display = 'none';
+            btnStart.style.display = 'flex';
+            if (seconds !== 0) {
+                btnStart.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/></svg> Resume`;
+            } else {
+                btnStart.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/></svg> Start Focus`;
+            }
+        }
+    }
+
+    // Persistence & Logging
+    function saveSession() {
+        if (seconds === 0) return alert("Timer is at 00:00:00");
+
+        stopTimer();
+
+        let task = taskInput.value.trim();
+        if (!task) {
+            task = seconds < 0 ? "Time Correction" : "Untitled Session";
+        }
+
+        const duration = formatDuration(seconds);
+        const date = new Date().toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+
+        // id represents the End Time (Save Time)
+        const entry = { id: Date.now(), task, duration, date, seconds };
+
+        saveToLocalStorage(entry);
+        renderLog(entry);
+        updateTotals();
+
+        seconds = 0;
+        updateDisplay();
+        updateStatus(false);
+        taskInput.value = "";
+        btnStart.innerHTML = `<svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/></svg> Start Focus`;
+    }
+
+    function saveToLocalStorage(entry) {
+        const history = JSON.parse(localStorage.getItem('stopwatch_history') || '[]');
+        history.unshift(entry);
+        localStorage.setItem('stopwatch_history', JSON.stringify(history));
+    }
+
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('stopwatch_history') || '[]');
+        logList.innerHTML = '';
+        if (history.length > 0) {
+            emptyState.style.display = 'none';
+            history.forEach(renderLog);
+        } else {
+            emptyState.style.display = 'block';
+        }
+        updateTotals();
+    }
+
+    function updateTotals() {
+        const history = JSON.parse(localStorage.getItem('stopwatch_history') || '[]');
+        const todayString = new Date().toDateString();
+
+        let dailySeconds = 0;
+        let totalSeconds = 0;
+
+        history.forEach(entry => {
+            const entrySeconds = entry.seconds || 0;
+            totalSeconds += entrySeconds;
+
+            const entryDate = new Date(entry.id);
+            if (entryDate.toDateString() === todayString) {
+                dailySeconds += entrySeconds;
+            }
+        });
+
+        dailyTotalDisplay.textContent = formatDuration(dailySeconds);
+        allTimeTotalDisplay.textContent = formatDuration(totalSeconds);
+    }
+
+    function renderLog(entry) {
+        emptyState.style.display = 'none';
+        const li = document.createElement('li');
+        li.className = 'log-item';
+        const isNeg = entry.seconds < 0;
+        li.innerHTML = `
+            <div class="log-info">
+                <div class="log-task" title="${escapeHtml(entry.task)}">${escapeHtml(entry.task)}</div>
+                <span class="log-date">${entry.date}</span>
+            </div>
+            <div class="log-time ${isNeg ? 'negative' : ''}">${entry.duration}</div>
+        `;
+        logList.insertBefore(li, logList.firstChild);
+    }
+
+    function clearHistory() {
+        if(confirm("Delete all history records?")) {
+            localStorage.removeItem('stopwatch_history');
+            logList.innerHTML = '';
+            emptyState.style.display = 'block';
+            updateTotals();
+        }
+    }
+
+    function exportCSV() {
+        const history = JSON.parse(localStorage.getItem('stopwatch_history') || '[]');
+        if (history.length === 0) return alert("No history to export.");
+
+        const headers = ["Task Title", "Duration (Hours)", "Duration (Minutes)", "Start Date", "Start Time", "End Date", "End Time"];
+        const rows = history.map(entry => {
+            // entry.id is the finish timestamp
+            const endTime = new Date(entry.id);
+            // Calculate start time: End Time - Duration (in ms)
+            const startTime = new Date(entry.id - (entry.seconds * 1000));
+
+            // Format Durations
+            const hours = (entry.seconds / 3600).toFixed(4);
+            const minutes = (entry.seconds / 60).toFixed(2);
+
+            // Escape task name for CSV (handle commas/quotes)
+            const taskName = `"${entry.task.replace(/"/g, '""')}"`;
+
+            // Split date and time
+            const startDate = startTime.toLocaleDateString();
+            const startTimeStr = startTime.toLocaleTimeString();
+            const endDate = endTime.toLocaleDateString();
+            const endTimeStr = endTime.toLocaleTimeString();
+
+            return [
+                taskName,
+                hours,
+                minutes,
+                startDate,
+                startTimeStr,
+                endDate,
+                endTimeStr
+            ].join(",");
+        });
+
+        const csvContent = [headers.join(","), ...rows].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", `taskflow_export_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+</body>
+</html>
