@@ -669,6 +669,8 @@
     let seconds = 0;
     let interval = null;
     let isRunning = false;
+    let timerStartTime = null; // Wall-clock time when timer was last started
+    let secondsAtStart = 0;    // Value of seconds when timer was last started
 
     // DOM Elements
     const display = document.getElementById('display');
@@ -1015,6 +1017,8 @@
     function startTimer() {
         if (isRunning) return;
         isRunning = true;
+        timerStartTime = Date.now();
+        secondsAtStart = seconds;
         interval = setInterval(() => {
             seconds++;
             updateDisplay();
@@ -1027,6 +1031,16 @@
         if (!isRunning) return;
         isRunning = false;
         clearInterval(interval);
+        // Correct for clock drift (e.g., browser pause during sleep/idle)
+        if (timerStartTime !== null) {
+            const elapsedWallClock = Math.floor((Date.now() - timerStartTime) / 1000);
+            const expectedSeconds = secondsAtStart + elapsedWallClock;
+            if (seconds !== expectedSeconds) {
+                seconds = expectedSeconds;
+                updateDisplay();
+            }
+            timerStartTime = null;
+        }
         toggleButtons(false);
         updateStatus(false);
     }
