@@ -14,7 +14,6 @@ A sleek, client-side focus timer and time-tracking app — built as a single HTM
 - **Quick Adjustments** — Add or remove time in preset increments (±5, 15, 30, or 60 minutes), or enter a custom value.
 - **Session History** — All completed sessions are saved locally and displayed with daily and all-time totals.
 - **CSV Export** — Export your full session history to a CSV file for use in spreadsheets or other tools.
-- **Glassmorphism UI** — A modern, dark-themed interface with frosted-glass styling, smooth animations, and responsive layout.
 - **Tasky the Mascot** — An animated owl companion who floats, blinks, and reacts to your input. Click Tasky for a surprise! 🦉
 - **Fully Offline** — Everything runs in the browser with no server, no build step, and no external dependencies. Data is stored in `localStorage`.
 - **Timer Drift Correction** — Automatically corrects the timer if the browser pauses during sleep or idle, so your tracked time stays accurate.
@@ -45,7 +44,7 @@ A sleek, client-side focus timer and time-tracking app — built as a single HTM
 6. Press **Export CSV** to download your data.
 7. Press **Discard Timer** to reset without saving.
 
-> 💡 **Tip:** Click on Tasky the owl mascot — there may be a hidden game waiting for you!
+> 💡 **Tip:** Try clicking on Tasky the owl mascot if your current activity is "game"!
 
 ## 🛠️ Technology
 
