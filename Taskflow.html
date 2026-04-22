@@ -671,6 +671,7 @@
     let isRunning = false;
     let timerStartTime = null; // Wall-clock time when timer was last started
     let secondsAtStart = 0;    // Value of seconds when timer was last started
+    let currentRunAdjustmentSeconds = 0; // Manual +/- time applied since the current run started
 
     // DOM Elements
     const display = document.getElementById('display');
@@ -1014,33 +1015,38 @@
 
 
     // Timer Logic
+    function syncTimerWithWallClock() {
+        if (timerStartTime === null) return;
+
+        const elapsedWallClock = Math.floor((Date.now() - timerStartTime) / 1000);
+        const expectedSeconds = secondsAtStart + currentRunAdjustmentSeconds + elapsedWallClock;
+
+        if (seconds !== expectedSeconds) {
+            seconds = expectedSeconds;
+            updateDisplay();
+        }
+    }
+
     function startTimer() {
         if (isRunning) return;
         isRunning = true;
         timerStartTime = Date.now();
         secondsAtStart = seconds;
-        interval = setInterval(() => {
-            seconds++;
-            updateDisplay();
-        }, 1000);
+        currentRunAdjustmentSeconds = 0; // Pre-start adjustments are already captured in secondsAtStart
+        updateDisplay();
+        interval = setInterval(syncTimerWithWallClock, 1000);
         toggleButtons(true);
         updateStatus(true);
     }
 
     function stopTimer() {
         if (!isRunning) return;
+        syncTimerWithWallClock();
         isRunning = false;
         clearInterval(interval);
-        // Correct for clock drift (e.g., browser pause during sleep/idle)
-        if (timerStartTime !== null) {
-            const elapsedWallClock = Math.floor((Date.now() - timerStartTime) / 1000);
-            const expectedSeconds = secondsAtStart + elapsedWallClock;
-            if (seconds !== expectedSeconds) {
-                seconds = expectedSeconds;
-                updateDisplay();
-            }
-            timerStartTime = null;
-        }
+        timerStartTime = null;
+        currentRunAdjustmentSeconds = 0;
+        updateDisplay();
         toggleButtons(false);
         updateStatus(false);
     }
@@ -1057,7 +1063,9 @@
 
     // Adjustment Logic
     function quickAdd(mins) {
-        seconds += mins * 60;
+        const shift = mins * 60;
+        seconds += shift;
+        if (isRunning) currentRunAdjustmentSeconds += shift;
         updateDisplay();
     }
 
@@ -1066,6 +1074,7 @@
         if (!isNaN(mins) && mins > 0) {
             const shift = mins * 60 * multiplier;
             seconds += shift;
+            if (isRunning) currentRunAdjustmentSeconds += shift;
             updateDisplay();
             adjustMinutesInput.value = '';
         }
