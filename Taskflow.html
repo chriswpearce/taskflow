@@ -1034,7 +1034,7 @@
         secondsAtStart = seconds;
         currentRunAdjustmentSeconds = 0;
         updateDisplay();
-        interval = setInterval(syncTimerWithWallClock, 250);
+        interval = setInterval(syncTimerWithWallClock, 1000);
         toggleButtons(true);
         updateStatus(true);
     }
@@ -1044,7 +1044,6 @@
         syncTimerWithWallClock();
         isRunning = false;
         clearInterval(interval);
-        interval = null;
         timerStartTime = null;
         currentRunAdjustmentSeconds = 0;
         updateDisplay();
