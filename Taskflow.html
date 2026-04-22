@@ -1032,7 +1032,7 @@
         isRunning = true;
         timerStartTime = Date.now();
         secondsAtStart = seconds;
-        currentRunAdjustmentSeconds = 0;
+        currentRunAdjustmentSeconds = 0; // Pre-start adjustments are already captured in secondsAtStart
         updateDisplay();
         interval = setInterval(syncTimerWithWallClock, 1000);
         toggleButtons(true);
