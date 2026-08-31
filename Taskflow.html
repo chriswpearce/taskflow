@@ -1879,7 +1879,7 @@
 
         // 2) Random beat
         const beatsPerBar = Math.random() < 0.7 ? 4 : 3;
-        const bpm = 80;
+        const bpm = 100;
         const beatDuration = 60 / bpm; // seconds per beat
         const barDuration = beatsPerBar * beatDuration; // seconds per bar
 
@@ -1930,18 +1930,14 @@
             if (level === 0) return; // Muted, skip playback
             const { melody, label } = generateMelody();
 
-            const masterGain = audioCtx.createGain();
-            masterGain.gain.value = level;
-            masterGain.connect(audioCtx.destination);
-
             let t = audioCtx.currentTime + 0.05;
             const midiEvents = []; // for MIDI export
 
             melody.forEach(block => {
                 const gain = audioCtx.createGain();
-                gain.connect(masterGain);
-                gain.gain.setValueAtTime(0.35, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + block.duration * 0.95);
+                gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0.35 * level, t);
+                gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.001 * level), t + block.duration * 0.95);
 
                 const osc = audioCtx.createOscillator();
                 osc.type = 'triangle';
