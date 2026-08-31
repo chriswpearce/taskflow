@@ -897,23 +897,6 @@
         </div>
     </div>
 
-    <!-- Reminders Card -->
-    <div class="card">
-        <div class="history-header">
-            <div class="header-top">
-                <h2>Reminders</h2>
-            </div>
-        </div>
-        <div class="adjust-row" style="margin-bottom: 16px;">
-            <input type="text" id="reminderText" placeholder="Add a reminder (e.g. Stretch your legs)" maxlength="100" autocomplete="off" />
-            <button class="btn-small" id="btnAddReminder">Add</button>
-        </div>
-        <ul id="reminderList" class="reminder-list">
-            <!-- Reminders go here -->
-        </ul>
-        <div id="remindersEmpty" class="empty-state">No reminders yet. Add one above.</div>
-    </div>
-
     <!-- History Card -->
     <div class="card">
         <div class="history-header">
@@ -933,6 +916,30 @@
             <!-- Logs go here -->
         </ul>
         <div id="emptyState" class="empty-state">No sessions recorded yet.</div>
+    </div>
+
+    <!-- Reminders Card -->
+    <div class="card">
+        <div class="history-header">
+            <div class="header-top">
+                <h2>Reminders</h2>
+            </div>
+        </div>
+        <div class="reminder-row" style="margin-bottom: 12px;">
+            <span>🔊 Reminder Volume</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="globalReminderVolume" min="0" max="100" value="50" />
+                <span class="volume-label" id="globalVolumeLabel">50%</span>
+            </div>
+        </div>
+        <div class="adjust-row" style="margin-bottom: 16px;">
+            <input type="text" id="reminderText" placeholder="Add a reminder (e.g. Stretch your legs)" maxlength="100" autocomplete="off" />
+            <button class="btn-small" id="btnAddReminder">Add</button>
+        </div>
+        <ul id="reminderList" class="reminder-list">
+            <!-- Reminders go here -->
+        </ul>
+        <div id="remindersEmpty" class="empty-state">No reminders yet. Add one above.</div>
     </div>
 
     <!-- Footer Note -->
@@ -1602,8 +1609,26 @@
     const btnAddReminder = document.getElementById('btnAddReminder');
     const reminderList = document.getElementById('reminderList');
     const remindersEmpty = document.getElementById('remindersEmpty');
+    const globalVolumeSlider = document.getElementById('globalReminderVolume');
+    const globalVolumeLabel = document.getElementById('globalVolumeLabel');
 
     let audioCtx = null;
+
+    function getGlobalReminderVolume() {
+        return parseInt(localStorage.getItem('taskflow_reminder_volume') ?? '50');
+    }
+
+    function initGlobalVolumeSlider() {
+        const vol = getGlobalReminderVolume();
+        globalVolumeSlider.value = vol;
+        globalVolumeLabel.textContent = vol + '%';
+        globalVolumeSlider.addEventListener('input', (e) => {
+            const v = parseInt(e.target.value);
+            localStorage.setItem('taskflow_reminder_volume', v);
+            globalVolumeLabel.textContent = v + '%';
+        });
+    }
+    initGlobalVolumeSlider();
 
     function getReminders() {
         try {
@@ -1636,7 +1661,6 @@
             text: text,
             active: true,
             sound: true,
-            volume: 50, // Medium by default
             frequency: 30,
             mode: 'clock', // 'clock' = wall-clock time, 'timer' = task timer time
             lastFired: Date.now(),
@@ -1707,13 +1731,6 @@
                             <span class="slider-toggle"></span>
                         </label>
                     </div>
-                    <div class="reminder-row">
-                        <span>Volume</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="range" class="reminder-volume" min="0" max="100" value="${reminder.volume}" ${reminder.sound ? '' : 'disabled'} />
-                            <span class="volume-label">${reminder.volume}%</span>
-                        </div>
-                    </div>
                 </div>
             `;
 
@@ -1762,13 +1779,6 @@
                 _updatingReminderId = null;
             });
 
-            const volumeSlider = li.querySelector('.reminder-volume');
-            volumeSlider.addEventListener('input', (e) => {
-                const volume = parseInt(e.target.value);
-                updateReminder(reminder.id, { volume });
-                li.querySelector('.volume-label').textContent = volume + '%';
-            });
-
             reminderList.appendChild(li);
         });
     }
@@ -1815,7 +1825,7 @@
         }
         showSpeechBubble(reminder.text);
         triggerMascotAnimation();
-        if (reminder.sound) playJingle(reminder.volume);
+        if (reminder.sound) playJingle(getGlobalReminderVolume());
     }
 
     // -------- SPEECH BUBBLE --------
