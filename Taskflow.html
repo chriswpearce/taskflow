@@ -1567,7 +1567,9 @@
             sound: true,
             volume: 50, // Medium by default
             frequency: 30,
-            lastFired: Date.now()
+            mode: 'clock', // 'clock' = wall-clock time, 'timer' = task timer time
+            lastFired: Date.now(),
+            lastFiredSeconds: seconds
         });
         storeReminders(reminders);
         reminderTextInput.value = '';
@@ -1593,6 +1595,14 @@
                 `<option value="${f.minutes}" ${f.minutes === reminder.frequency ? 'selected' : ''}>${f.label}</option>`
             ).join('');
 
+            const mode = reminder.mode || 'clock';
+            const modeOptions = [
+                { value: 'clock', label: 'Clock time' },
+                { value: 'timer', label: 'Task timer' }
+            ].map(m =>
+                `<option value="${m.value}" ${m.value === mode ? 'selected' : ''}>${m.label}</option>`
+            ).join('');
+
             li.innerHTML = `
                 <div class="reminder-top">
                     <span class="reminder-name" title="${escapeHtml(reminder.text)}">${escapeHtml(reminder.text)}</span>
@@ -1600,6 +1610,7 @@
                         <input type="checkbox" class="reminder-active" ${reminder.active ? 'checked' : ''} />
                         <span class="slider-toggle"></span>
                     </label>
+                    <button class="btn-xs reminder-test" title="Show this reminder now as a test">Show now</button>
                     <button class="btn-xs-danger reminder-delete">Delete</button>
                 </div>
                 <div class="reminder-next">${reminder.active ? 'Next: ' + formatNextFire(reminder) : 'Inactive'}</div>
@@ -1607,6 +1618,10 @@
                     <div class="reminder-row">
                         <span>Frequency</span>
                         <select class="reminder-frequency">${options}</select>
+                    </div>
+                    <div class="reminder-row">
+                        <span>Relative to</span>
+                        <select class="reminder-mode">${modeOptions}</select>
                     </div>
                     <div class="reminder-row">
                         <span>Sound</span>
@@ -1628,15 +1643,32 @@
             li.querySelector('.reminder-active').addEventListener('change', (e) => {
                 const changes = { active: e.target.checked };
                 // Restart the interval from now when (re)activated
-                if (e.target.checked) changes.lastFired = Date.now();
+                if (e.target.checked) {
+                    changes.lastFired = Date.now();
+                    changes.lastFiredSeconds = seconds;
+                }
                 updateReminder(reminder.id, changes);
                 renderReminders();
             });
 
             li.querySelector('.reminder-delete').addEventListener('click', () => deleteReminder(reminder.id));
 
+            li.querySelector('.reminder-test').addEventListener('click', () => {
+                fireReminder({ ...reminder, id: null });
+            });
+
             li.querySelector('.reminder-frequency').addEventListener('change', (e) => {
                 updateReminder(reminder.id, { frequency: parseInt(e.target.value) });
+                renderReminders();
+            });
+
+            li.querySelector('.reminder-mode').addEventListener('change', (e) => {
+                // Restart the interval from now so the new reference point applies cleanly
+                updateReminder(reminder.id, {
+                    mode: e.target.value,
+                    lastFired: Date.now(),
+                    lastFiredSeconds: seconds
+                });
                 renderReminders();
             });
 
@@ -1658,6 +1690,12 @@
 
     function formatNextFire(reminder) {
         if (!reminder.lastFired) return 'soon';
+        if ((reminder.mode || 'clock') === 'timer') {
+            if (!isRunning) return 'when the task timer runs';
+            const atSeconds = (reminder.lastFiredSeconds || 0) + reminder.frequency * 60;
+            const remaining = Math.max(0, atSeconds - seconds);
+            return 'after ' + formatDuration(remaining) + ' more of task time';
+        }
         const next = new Date(reminder.lastFired + reminder.frequency * 60000);
         return next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
@@ -1668,6 +1706,15 @@
 
         getReminders().forEach(reminder => {
             if (!reminder.active || !reminder.lastFired) return;
+            if ((reminder.mode || 'clock') === 'timer') {
+                if (!isRunning) return;
+                const atSeconds = (reminder.lastFiredSeconds || 0) + reminder.frequency * 60;
+                if (seconds >= atSeconds) {
+                    fireReminder(reminder);
+                    changed = true;
+                }
+                return;
+            }
             if (now - reminder.lastFired >= reminder.frequency * 60000) {
                 fireReminder(reminder);
                 changed = true;
@@ -1678,7 +1725,9 @@
     }
 
     function fireReminder(reminder) {
-        updateReminder(reminder.id, { lastFired: Date.now() });
+        if (reminder.id !== null && reminder.id !== undefined) {
+            updateReminder(reminder.id, { lastFired: Date.now(), lastFiredSeconds: seconds });
+        }
         showToast(reminder.text);
         if (reminder.sound) playChime(reminder.volume);
     }
