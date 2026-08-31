@@ -1937,7 +1937,7 @@
                 const gain = audioCtx.createGain();
                 gain.connect(audioCtx.destination);
                 gain.gain.setValueAtTime(0.35 * level, t);
-                gain.gain.exponentialRampToValueAtTime(0.001 * level, t + block.duration * 0.95);
+                gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, 0.001 * level), t + block.duration * 0.95);
 
                 const osc = audioCtx.createOscillator();
                 osc.type = 'triangle';
