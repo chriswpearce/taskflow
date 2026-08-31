@@ -528,6 +528,213 @@
             min-height: 20px;
         }
 
+        /* Reminders */
+        .reminder-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .reminder-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .reminder-item.reminder-off { opacity: 0.55; }
+
+        .reminder-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .reminder-name {
+            font-weight: 500;
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .reminder-next {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .reminder-settings {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .reminder-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        select {
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+            border-radius: 22px;
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background: var(--text-muted);
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider-toggle {
+            background: rgba(99, 102, 241, 0.4);
+            border-color: var(--primary);
+        }
+
+        .switch input:checked + .slider-toggle:before {
+            transform: translateX(18px);
+            background: var(--primary);
+        }
+
+        /* Volume Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 120px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .volume-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-width: 34px;
+            text-align: right;
+        }
+
+        /* Toast Notifications */
+        #toastContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 320px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: var(--shadow);
+            animation: toastIn 0.3s ease;
+            cursor: pointer;
+        }
+
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-body { flex: 1; }
+        .toast-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .toast-text { font-weight: 500; }
+
+        .toast.fade-out {
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.4s ease;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
     </style>
 </head>
 <body>
@@ -626,6 +833,23 @@
         </div>
     </div>
 
+    <!-- Reminders Card -->
+    <div class="card">
+        <div class="history-header">
+            <div class="header-top">
+                <h2>Reminders</h2>
+            </div>
+        </div>
+        <div class="adjust-row" style="margin-bottom: 16px;">
+            <input type="text" id="reminderText" placeholder="Add a reminder (e.g. Stretch your legs)" maxlength="100" autocomplete="off" />
+            <button class="btn-small" id="btnAddReminder">Add</button>
+        </div>
+        <ul id="reminderList" class="reminder-list">
+            <!-- Reminders go here -->
+        </ul>
+        <div id="remindersEmpty" class="empty-state">No reminders yet. Add one above.</div>
+    </div>
+
     <!-- History Card -->
     <div class="card">
         <div class="history-header">
@@ -652,6 +876,9 @@
         Created by Chris Pearce • 10/12/2025
     </div>
 </div>
+
+<!-- Toast Notifications -->
+<div id="toastContainer"></div>
 
 <!-- Game Overlay -->
 <div id="gameOverlay">
@@ -1288,6 +1515,227 @@
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // -------- REMINDERS --------
+    const REMINDERS_KEY = 'taskflow_reminders';
+    const REMINDER_FREQUENCIES = [
+        { label: 'Every 15 minutes', minutes: 15 },
+        { label: 'Every 30 minutes', minutes: 30 },
+        { label: 'Every 1 hour', minutes: 60 },
+        { label: 'Every 2 hours', minutes: 120 },
+        { label: 'Every 4 hours', minutes: 240 }
+    ];
+
+    const reminderTextInput = document.getElementById('reminderText');
+    const btnAddReminder = document.getElementById('btnAddReminder');
+    const reminderList = document.getElementById('reminderList');
+    const remindersEmpty = document.getElementById('remindersEmpty');
+    const toastContainer = document.getElementById('toastContainer');
+
+    let audioCtx = null;
+
+    function getReminders() {
+        try {
+            return JSON.parse(localStorage.getItem(REMINDERS_KEY) || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function storeReminders(reminders) {
+        localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+    }
+
+    function updateReminder(id, changes) {
+        const reminders = getReminders();
+        const reminder = reminders.find(r => r.id === id);
+        if (reminder) {
+            Object.assign(reminder, changes);
+            storeReminders(reminders);
+        }
+    }
+
+    function addReminder() {
+        const text = reminderTextInput.value.trim();
+        if (!text) return;
+
+        const reminders = getReminders();
+        reminders.push({
+            id: Date.now(),
+            text: text,
+            active: true,
+            sound: true,
+            volume: 50, // Medium by default
+            frequency: 30,
+            lastFired: Date.now()
+        });
+        storeReminders(reminders);
+        reminderTextInput.value = '';
+        renderReminders();
+    }
+
+    function deleteReminder(id) {
+        if (!confirm("Delete this reminder?")) return;
+        storeReminders(getReminders().filter(r => r.id !== id));
+        renderReminders();
+    }
+
+    function renderReminders() {
+        const reminders = getReminders();
+        reminderList.innerHTML = '';
+        remindersEmpty.style.display = reminders.length > 0 ? 'none' : 'block';
+
+        reminders.forEach(reminder => {
+            const li = document.createElement('li');
+            li.className = 'reminder-item' + (reminder.active ? '' : ' reminder-off');
+
+            const options = REMINDER_FREQUENCIES.map(f =>
+                `<option value="${f.minutes}" ${f.minutes === reminder.frequency ? 'selected' : ''}>${f.label}</option>`
+            ).join('');
+
+            li.innerHTML = `
+                <div class="reminder-top">
+                    <span class="reminder-name" title="${escapeHtml(reminder.text)}">${escapeHtml(reminder.text)}</span>
+                    <label class="switch" title="${reminder.active ? 'Deactivate' : 'Activate'}">
+                        <input type="checkbox" class="reminder-active" ${reminder.active ? 'checked' : ''} />
+                        <span class="slider-toggle"></span>
+                    </label>
+                    <button class="btn-xs-danger reminder-delete">Delete</button>
+                </div>
+                <div class="reminder-next">${reminder.active ? 'Next: ' + formatNextFire(reminder) : 'Inactive'}</div>
+                <div class="reminder-settings">
+                    <div class="reminder-row">
+                        <span>Frequency</span>
+                        <select class="reminder-frequency">${options}</select>
+                    </div>
+                    <div class="reminder-row">
+                        <span>Sound</span>
+                        <label class="switch">
+                            <input type="checkbox" class="reminder-sound" ${reminder.sound ? 'checked' : ''} />
+                            <span class="slider-toggle"></span>
+                        </label>
+                    </div>
+                    <div class="reminder-row">
+                        <span>Volume</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" class="reminder-volume" min="0" max="100" value="${reminder.volume}" ${reminder.sound ? '' : 'disabled'} />
+                            <span class="volume-label">${reminder.volume}%</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            li.querySelector('.reminder-active').addEventListener('change', (e) => {
+                const changes = { active: e.target.checked };
+                // Restart the interval from now when (re)activated
+                if (e.target.checked) changes.lastFired = Date.now();
+                updateReminder(reminder.id, changes);
+                renderReminders();
+            });
+
+            li.querySelector('.reminder-delete').addEventListener('click', () => deleteReminder(reminder.id));
+
+            li.querySelector('.reminder-frequency').addEventListener('change', (e) => {
+                updateReminder(reminder.id, { frequency: parseInt(e.target.value) });
+                renderReminders();
+            });
+
+            li.querySelector('.reminder-sound').addEventListener('change', (e) => {
+                updateReminder(reminder.id, { sound: e.target.checked });
+                renderReminders();
+            });
+
+            const volumeSlider = li.querySelector('.reminder-volume');
+            volumeSlider.addEventListener('input', (e) => {
+                const volume = parseInt(e.target.value);
+                updateReminder(reminder.id, { volume });
+                li.querySelector('.volume-label').textContent = volume + '%';
+            });
+
+            reminderList.appendChild(li);
+        });
+    }
+
+    function formatNextFire(reminder) {
+        if (!reminder.lastFired) return 'soon';
+        const next = new Date(reminder.lastFired + reminder.frequency * 60000);
+        return next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function checkReminders() {
+        const now = Date.now();
+        let changed = false;
+
+        getReminders().forEach(reminder => {
+            if (!reminder.active || !reminder.lastFired) return;
+            if (now - reminder.lastFired >= reminder.frequency * 60000) {
+                fireReminder(reminder);
+                changed = true;
+            }
+        });
+
+        if (changed) renderReminders();
+    }
+
+    function fireReminder(reminder) {
+        updateReminder(reminder.id, { lastFired: Date.now() });
+        showToast(reminder.text);
+        if (reminder.sound) playChime(reminder.volume);
+    }
+
+    function showToast(text) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <span class="toast-icon">&#128276;</span>
+            <div class="toast-body">
+                <div class="toast-title">Reminder</div>
+                <div class="toast-text">${escapeHtml(text)}</div>
+            </div>
+        `;
+        toast.addEventListener('click', () => toast.remove());
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 400);
+        }, 8000);
+    }
+
+    function playChime(volume) {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const gain = audioCtx.createGain();
+            gain.connect(audioCtx.destination);
+            const level = Math.max(0, Math.min(100, volume)) / 100;
+
+            // Two-tone chime
+            [880, 660].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                const start = audioCtx.currentTime + i * 0.25;
+                osc.start(start);
+                osc.stop(start + 0.3);
+            });
+
+            gain.gain.setValueAtTime(level * 0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
+        } catch (e) {
+            // Audio not available; reminder toast still shows
+        }
+    }
+
+    btnAddReminder.addEventListener('click', addReminder);
+    reminderTextInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addReminder();
+    });
+
+    renderReminders();
+    setInterval(checkReminders, 10000);
 </script>
 </body>
 </html>
