@@ -897,6 +897,27 @@
         </div>
     </div>
 
+    <!-- History Card -->
+    <div class="card">
+        <div class="history-header">
+            <div class="header-top">
+                <h2>Recent Sessions</h2>
+                <div class="header-actions">
+                    <button class="btn-xs" id="btnExport">Export CSV</button>
+                    <button class="btn-xs-danger" id="btnClearHistory">Clear All</button>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-box">Total Today<span id="dailyTotalDisplay">00:00:00</span></div>
+                <div class="stat-box">Total All Time<span id="allTimeTotalDisplay">00:00:00</span></div>
+            </div>
+        </div>
+        <ul id="logList" class="log-list">
+            <!-- Logs go here -->
+        </ul>
+        <div id="emptyState" class="empty-state">No sessions recorded yet.</div>
+    </div>
+
     <!-- Reminders Card -->
     <div class="card">
         <div class="history-header">
@@ -919,27 +940,6 @@
             <!-- Reminders go here -->
         </ul>
         <div id="remindersEmpty" class="empty-state">No reminders yet. Add one above.</div>
-    </div>
-
-    <!-- History Card -->
-    <div class="card">
-        <div class="history-header">
-            <div class="header-top">
-                <h2>Recent Sessions</h2>
-                <div class="header-actions">
-                    <button class="btn-xs" id="btnExport">Export CSV</button>
-                    <button class="btn-xs-danger" id="btnClearHistory">Clear All</button>
-                </div>
-            </div>
-            <div class="header-stats">
-                <div class="stat-box">Total Today<span id="dailyTotalDisplay">00:00:00</span></div>
-                <div class="stat-box">Total All Time<span id="allTimeTotalDisplay">00:00:00</span></div>
-            </div>
-        </div>
-        <ul id="logList" class="log-list">
-            <!-- Logs go here -->
-        </ul>
-        <div id="emptyState" class="empty-state">No sessions recorded yet.</div>
     </div>
 
     <!-- Footer Note -->
