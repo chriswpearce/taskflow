@@ -698,9 +698,8 @@
         /* Speech Bubble */
         .speech-bubble {
             position: absolute;
-            top: -60px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: -10px;
+            left: 110px;
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -722,22 +721,22 @@
         .speech-bubble::after {
             content: '';
             position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: -8px;
+            transform: translateY(-50%);
             width: 0;
             height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid var(--primary);
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-right: 8px solid var(--primary);
         }
         .speech-bubble.fade-out {
             opacity: 0;
             transition: opacity 0.4s ease;
         }
         @keyframes bubbleIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         /* Melody History Panel */
@@ -799,49 +798,6 @@
             color: var(--accent);
         }
         .melody-item button:hover { background: rgba(56,189,248,0.15); }
-
-        /* Toast Notifications */
-        #toastContainer {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: 320px;
-        }
-
-        .toast {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--primary);
-            border-radius: 12px;
-            padding: 14px 16px;
-            box-shadow: var(--shadow);
-            animation: toastIn 0.3s ease;
-            cursor: pointer;
-        }
-
-        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
-        .toast-body { flex: 1; }
-        .toast-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .toast-text { font-weight: 500; }
-
-        .toast.fade-out {
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.4s ease;
-        }
-
-        @keyframes toastIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
 
     </style>
 </head>
@@ -984,9 +940,6 @@
         Created by Chris Pearce • 10/12/2025
     </div>
 </div>
-
-<!-- Toast Notifications -->
-<div id="toastContainer"></div>
 
 <!-- Melody History Panel -->
 <div class="melody-panel" id="melodyPanel">
@@ -1649,7 +1602,6 @@
     const btnAddReminder = document.getElementById('btnAddReminder');
     const reminderList = document.getElementById('reminderList');
     const remindersEmpty = document.getElementById('remindersEmpty');
-    const toastContainer = document.getElementById('toastContainer');
 
     let audioCtx = null;
 
@@ -1701,6 +1653,8 @@
         renderReminders();
     }
 
+    let _updatingReminderId = null;
+
     function renderReminders() {
         const reminders = getReminders();
         reminderList.innerHTML = '';
@@ -1708,7 +1662,9 @@
 
         reminders.forEach(reminder => {
             const li = document.createElement('li');
+            const shouldAnimate = _updatingReminderId === null || _updatingReminderId === reminder.id;
             li.className = 'reminder-item' + (reminder.active ? '' : ' reminder-off');
+            if (!shouldAnimate) li.style.animation = 'none';
 
             const options = REMINDER_FREQUENCIES.map(f =>
                 `<option value="${f.minutes}" ${f.minutes === reminder.frequency ? 'selected' : ''}>${f.label}</option>`
@@ -1769,7 +1725,9 @@
                     changes.lastFiredSeconds = seconds;
                 }
                 updateReminder(reminder.id, changes);
+                _updatingReminderId = reminder.id;
                 renderReminders();
+                _updatingReminderId = null;
             });
 
             li.querySelector('.reminder-delete').addEventListener('click', () => deleteReminder(reminder.id));
@@ -1780,7 +1738,9 @@
 
             li.querySelector('.reminder-frequency').addEventListener('change', (e) => {
                 updateReminder(reminder.id, { frequency: parseInt(e.target.value) });
+                _updatingReminderId = reminder.id;
                 renderReminders();
+                _updatingReminderId = null;
             });
 
             li.querySelector('.reminder-mode').addEventListener('change', (e) => {
@@ -1790,12 +1750,16 @@
                     lastFired: Date.now(),
                     lastFiredSeconds: seconds
                 });
+                _updatingReminderId = reminder.id;
                 renderReminders();
+                _updatingReminderId = null;
             });
 
             li.querySelector('.reminder-sound').addEventListener('change', (e) => {
                 updateReminder(reminder.id, { sound: e.target.checked });
+                _updatingReminderId = reminder.id;
                 renderReminders();
+                _updatingReminderId = null;
             });
 
             const volumeSlider = li.querySelector('.reminder-volume');
@@ -1851,7 +1815,6 @@
         }
         showSpeechBubble(reminder.text);
         triggerMascotAnimation();
-        showToast(reminder.text);
         if (reminder.sound) playJingle(reminder.volume);
     }
 
@@ -1870,25 +1833,6 @@
             bubble.classList.add('fade-out');
             setTimeout(() => bubble.remove(), 400);
         }, 10000);
-    }
-
-    function showToast(text) {
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `
-            <span class="toast-icon">&#128276;</span>
-            <div class="toast-body">
-                <div class="toast-title">Reminder</div>
-                <div class="toast-text">${escapeHtml(text)}</div>
-            </div>
-        `;
-        toast.addEventListener('click', () => toast.remove());
-        toastContainer.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            setTimeout(() => toast.remove(), 400);
-        }, 8000);
     }
 
     // -------- JINGLE GENERATOR --------
@@ -1982,16 +1926,21 @@
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            const level = Math.max(0, Math.min(100, volume)) / 100;
+            const level = Math.max(0, Math.min(100, volume ?? 50)) / 100;
+            if (level === 0) return; // Muted, skip playback
             const { melody, label } = generateMelody();
+
+            const masterGain = audioCtx.createGain();
+            masterGain.gain.value = level;
+            masterGain.connect(audioCtx.destination);
 
             let t = audioCtx.currentTime + 0.05;
             const midiEvents = []; // for MIDI export
 
             melody.forEach(block => {
                 const gain = audioCtx.createGain();
-                gain.connect(audioCtx.destination);
-                gain.gain.setValueAtTime(level * 0.35, t);
+                gain.connect(masterGain);
+                gain.gain.setValueAtTime(0.35, t);
                 gain.gain.exponentialRampToValueAtTime(0.001, t + block.duration * 0.95);
 
                 const osc = audioCtx.createOscillator();
@@ -2007,7 +1956,7 @@
 
             // Store in history (max 3)
             melodyHistory.push({ label, events: midiEvents, bpm: melody.bpm || 80, timestamp: Date.now() });
-            if (melodyHistory.length > 3) melodyHistory.shift();
+            if (melodyHistory.length > 5) melodyHistory.shift();
             localStorage.setItem('taskflow_melody_history', JSON.stringify(melodyHistory));
             renderMelodyPanel();
 
@@ -2124,8 +2073,12 @@
             const timeStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             div.innerHTML = `
                 <span class="melody-item-label">${escapeHtml(m.label)} (${timeStr})</span>
+                <button class="melody-play-btn">▶ Play</button>
                 <button class="melody-save-btn">Save MIDI</button>
             `;
+            div.querySelector('.melody-play-btn').addEventListener('click', () => {
+                replayMelody(m);
+            });
             div.querySelector('.melody-save-btn').addEventListener('click', () => {
                 downloadMidi(m.events, m.bpm, m.label);
             });
@@ -2134,6 +2087,31 @@
     }
 
     renderMelodyPanel();
+
+    function replayMelody(m) {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            let t = audioCtx.currentTime + 0.05;
+            m.events.forEach(ev => {
+                const gain = audioCtx.createGain();
+                gain.connect(audioCtx.destination);
+                const startTime = t + ev.start;
+                gain.gain.setValueAtTime(0.35, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + ev.duration * 0.95);
+
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = midiNoteToFreq(ev.note);
+                osc.connect(gain);
+                osc.start(startTime);
+                osc.stop(startTime + ev.duration);
+            });
+        } catch (e) {
+            // Audio not available
+        }
+    }
 
     btnAddReminder.addEventListener('click', addReminder);
     reminderTextInput.addEventListener('keydown', (e) => {
