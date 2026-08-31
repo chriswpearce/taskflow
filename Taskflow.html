@@ -550,17 +550,20 @@
 
         .reminder-top {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .reminder-name {
             font-weight: 500;
-            flex: 1;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
+            word-wrap: break-word;
+        }
+
+        .reminder-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
         }
 
         .reminder-next {
@@ -691,6 +694,111 @@
             min-width: 34px;
             text-align: right;
         }
+
+        /* Speech Bubble */
+        .speech-bubble {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--primary);
+            border-radius: 14px;
+            padding: 10px 16px;
+            color: var(--text-main);
+            font-size: 0.82rem;
+            font-weight: 500;
+            max-width: 220px;
+            text-align: center;
+            white-space: normal;
+            word-wrap: break-word;
+            box-shadow: var(--shadow);
+            z-index: 20;
+            animation: bubbleIn 0.3s ease;
+            pointer-events: none;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--primary);
+        }
+        .speech-bubble.fade-out {
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* Melody History Panel */
+        .melody-panel {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            z-index: 900;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            font-size: 0.8rem;
+            overflow: hidden;
+            max-width: 280px;
+        }
+        .melody-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+            user-select: none;
+        }
+        .melody-panel-header:hover { color: var(--text-main); }
+        .melody-panel-body {
+            display: none;
+            padding: 0 12px 10px 12px;
+        }
+        .melody-panel.open .melody-panel-body { display: block; }
+        .melody-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .melody-item:last-child { border-bottom: none; }
+        .melody-item-label {
+            flex: 1;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .melody-item button {
+            width: auto;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            height: auto;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            color: var(--accent);
+        }
+        .melody-item button:hover { background: rgba(56,189,248,0.15); }
 
         /* Toast Notifications */
         #toastContainer {
@@ -879,6 +987,17 @@
 
 <!-- Toast Notifications -->
 <div id="toastContainer"></div>
+
+<!-- Melody History Panel -->
+<div class="melody-panel" id="melodyPanel">
+    <div class="melody-panel-header" id="melodyPanelToggle">
+        🎵 Recent Jingles <span id="melodyPanelArrow">▸</span>
+    </div>
+    <div class="melody-panel-body" id="melodyPanelBody">
+        <div id="melodyListEmpty" style="color:var(--text-muted); padding:6px 0; font-size:0.75rem;">No jingles yet.</div>
+        <div id="melodyList"></div>
+    </div>
+</div>
 
 <!-- Game Overlay -->
 <div id="gameOverlay">
@@ -1606,12 +1725,14 @@
             li.innerHTML = `
                 <div class="reminder-top">
                     <span class="reminder-name" title="${escapeHtml(reminder.text)}">${escapeHtml(reminder.text)}</span>
-                    <label class="switch" title="${reminder.active ? 'Deactivate' : 'Activate'}">
-                        <input type="checkbox" class="reminder-active" ${reminder.active ? 'checked' : ''} />
-                        <span class="slider-toggle"></span>
-                    </label>
-                    <button class="btn-xs reminder-test" title="Show this reminder now as a test">Show now</button>
-                    <button class="btn-xs-danger reminder-delete">Delete</button>
+                    <div class="reminder-actions">
+                        <label class="switch" title="${reminder.active ? 'Deactivate' : 'Activate'}">
+                            <input type="checkbox" class="reminder-active" ${reminder.active ? 'checked' : ''} />
+                            <span class="slider-toggle"></span>
+                        </label>
+                        <button class="btn-xs reminder-test" title="Show this reminder now as a test">Show now</button>
+                        <button class="btn-xs-danger reminder-delete">Delete</button>
+                    </div>
                 </div>
                 <div class="reminder-next">${reminder.active ? 'Next: ' + formatNextFire(reminder) : 'Inactive'}</div>
                 <div class="reminder-settings">
@@ -1728,8 +1849,27 @@
         if (reminder.id !== null && reminder.id !== undefined) {
             updateReminder(reminder.id, { lastFired: Date.now(), lastFiredSeconds: seconds });
         }
+        showSpeechBubble(reminder.text);
+        triggerMascotAnimation();
         showToast(reminder.text);
-        if (reminder.sound) playChime(reminder.volume);
+        if (reminder.sound) playJingle(reminder.volume);
+    }
+
+    // -------- SPEECH BUBBLE --------
+    function showSpeechBubble(text) {
+        // Remove any existing bubble
+        const existing = mascotWrapper.querySelector('.speech-bubble');
+        if (existing) existing.remove();
+
+        const bubble = document.createElement('div');
+        bubble.className = 'speech-bubble';
+        bubble.textContent = text;
+        mascotWrapper.appendChild(bubble);
+
+        setTimeout(() => {
+            bubble.classList.add('fade-out');
+            setTimeout(() => bubble.remove(), 400);
+        }, 10000);
     }
 
     function showToast(text) {
@@ -1751,32 +1891,249 @@
         }, 8000);
     }
 
-    function playChime(volume) {
+    // -------- JINGLE GENERATOR --------
+    const SCALE_TYPES = {
+        major:           [0, 2, 4, 5, 7, 9, 11],
+        minor:           [0, 2, 3, 5, 7, 8, 10],
+        majorPentatonic: [0, 2, 4, 7, 9],
+        minorPentatonic: [0, 3, 5, 7, 10]
+    };
+
+    const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const SCALE_TYPE_NAMES = { major:'Major', minor:'Minor', majorPentatonic:'Maj Pent', minorPentatonic:'Min Pent' };
+
+    // Chord triads built from scale degree indices
+    function buildChords(scaleNotes) {
+        const chords = [];
+        for (let i = 0; i < scaleNotes.length; i++) {
+            const chord = [];
+            for (let j = 0; j < 3; j++) {
+                chord.push(scaleNotes[(i + j * 2) % scaleNotes.length]);
+            }
+            chords.push({ root: scaleNotes[i], notes: chord });
+        }
+        return chords;
+    }
+
+    // Bar division patterns (fractions of bar)
+    const BAR_DIVISIONS = [
+        [0.25, 0.25, 0.25, 0.25],
+        [0.25, 0.75],
+        [0.50, 0.50],
+        [0.75, 0.25]
+    ];
+
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function generateMelody() {
+        // 1) Random scale
+        const rootMidi = 60 + Math.floor(Math.random() * 12); // C4-B4
+        const rootName = NOTE_NAMES[rootMidi % 12];
+        const scaleTypeKey = pickRandom(Object.keys(SCALE_TYPES));
+        const intervals = SCALE_TYPES[scaleTypeKey];
+        const scaleNotes = intervals.map(i => rootMidi + i);
+
+        // 2) Random beat
+        const beatsPerBar = Math.random() < 0.7 ? 4 : 3;
+        const bpm = 80;
+        const beatDuration = 60 / bpm; // seconds per beat
+        const barDuration = beatsPerBar * beatDuration; // seconds per bar
+
+        // 3) Divide two bars
+        const div1 = pickRandom(BAR_DIVISIONS);
+        const div2 = pickRandom(BAR_DIVISIONS);
+
+        // 4) Assign chords
+        const chords = buildChords(scaleNotes);
+        // First chord must contain root
+        const rootChords = chords.filter(c => c.root === rootMidi);
+
+        const blocks = [];
+        const allDivs = [div1, div2];
+        for (let bar = 0; bar < 2; bar++) {
+            const div = allDivs[bar];
+            for (let b = 0; b < div.length; b++) {
+                const isFirst = (bar === 0 && b === 0);
+                const chord = isFirst ? pickRandom(rootChords) : pickRandom(chords);
+                const note = pickRandom(chord.notes);
+                blocks.push({
+                    duration: div[b] * barDuration,
+                    note: note,
+                    chord: chord
+                });
+            }
+        }
+
+        // 5) Melody = blocks from two bars
+        // 6) Repeat once => 4 bars total
+        const melody = [...blocks, ...blocks];
+
+        const label = `${rootName} ${SCALE_TYPE_NAMES[scaleTypeKey]} ${beatsPerBar}/4`;
+
+        return { melody, bpm, beatsPerBar, rootName, scaleTypeKey, label };
+    }
+
+    function midiNoteToFreq(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+
+    let melodyHistory = JSON.parse(localStorage.getItem('taskflow_melody_history') || '[]');
+
+    function playJingle(volume) {
         try {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            const gain = audioCtx.createGain();
-            gain.connect(audioCtx.destination);
             const level = Math.max(0, Math.min(100, volume)) / 100;
+            const { melody, label } = generateMelody();
 
-            // Two-tone chime
-            [880, 660].forEach((freq, i) => {
+            let t = audioCtx.currentTime + 0.05;
+            const midiEvents = []; // for MIDI export
+
+            melody.forEach(block => {
+                const gain = audioCtx.createGain();
+                gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(level * 0.35, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + block.duration * 0.95);
+
                 const osc = audioCtx.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
+                osc.type = 'triangle';
+                osc.frequency.value = midiNoteToFreq(block.note);
                 osc.connect(gain);
-                const start = audioCtx.currentTime + i * 0.25;
-                osc.start(start);
-                osc.stop(start + 0.3);
+                osc.start(t);
+                osc.stop(t + block.duration);
+
+                midiEvents.push({ note: block.note, start: t - audioCtx.currentTime - 0.05, duration: block.duration });
+                t += block.duration;
             });
 
-            gain.gain.setValueAtTime(level * 0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
+            // Store in history (max 3)
+            melodyHistory.push({ label, events: midiEvents, bpm: melody.bpm || 80, timestamp: Date.now() });
+            if (melodyHistory.length > 3) melodyHistory.shift();
+            localStorage.setItem('taskflow_melody_history', JSON.stringify(melodyHistory));
+            renderMelodyPanel();
+
         } catch (e) {
             // Audio not available; reminder toast still shows
         }
     }
+
+    // -------- MIDI EXPORT --------
+    function buildMidiFile(events, bpm) {
+        // Minimal single-track MIDI file (format 0)
+        const ticksPerBeat = 480;
+        const usPerBeat = Math.round(60000000 / (bpm || 80));
+
+        function toVLQ(value) {
+            const bytes = [];
+            bytes.push(value & 0x7F);
+            value >>= 7;
+            while (value > 0) {
+                bytes.push((value & 0x7F) | 0x80);
+                value >>= 7;
+            }
+            return bytes.reverse();
+        }
+
+        function writeUint16(arr, v) { arr.push((v >> 8) & 0xFF, v & 0xFF); }
+        function writeUint32(arr, v) { arr.push((v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); }
+
+        // Build track data
+        const track = [];
+
+        // Tempo meta event
+        track.push(0x00, 0xFF, 0x51, 0x03);
+        track.push((usPerBeat >> 16) & 0xFF, (usPerBeat >> 8) & 0xFF, usPerBeat & 0xFF);
+
+        // Program change to music box (ch0, program 10 = Glockenspiel)
+        track.push(0x00, 0xC0, 0x09);
+
+        // Convert events to MIDI note on/off
+        const midiMsgs = [];
+        events.forEach(ev => {
+            const startTick = Math.round((ev.start / (60 / (bpm || 80))) * ticksPerBeat);
+            const durTick = Math.max(1, Math.round((ev.duration / (60 / (bpm || 80))) * ticksPerBeat));
+            midiMsgs.push({ tick: startTick, type: 'on', note: ev.note });
+            midiMsgs.push({ tick: startTick + durTick, type: 'off', note: ev.note });
+        });
+
+        midiMsgs.sort((a, b) => a.tick - b.tick || (a.type === 'off' ? -1 : 1));
+
+        let prevTick = 0;
+        midiMsgs.forEach(msg => {
+            const delta = msg.tick - prevTick;
+            prevTick = msg.tick;
+            const vlq = toVLQ(delta);
+            vlq.forEach(b => track.push(b));
+            if (msg.type === 'on') {
+                track.push(0x90, msg.note, 80);
+            } else {
+                track.push(0x80, msg.note, 0);
+            }
+        });
+
+        // End of track
+        track.push(0x00, 0xFF, 0x2F, 0x00);
+
+        // Build file
+        const file = [];
+        // Header: MThd
+        [0x4D, 0x54, 0x68, 0x64].forEach(b => file.push(b));
+        writeUint32(file, 6); // header length
+        writeUint16(file, 0); // format 0
+        writeUint16(file, 1); // 1 track
+        writeUint16(file, ticksPerBeat);
+
+        // Track: MTrk
+        [0x4D, 0x54, 0x72, 0x6B].forEach(b => file.push(b));
+        writeUint32(file, track.length);
+        track.forEach(b => file.push(b));
+
+        return new Uint8Array(file);
+    }
+
+    function downloadMidi(events, bpm, label) {
+        const data = buildMidiFile(events, bpm);
+        const blob = new Blob([data], { type: 'audio/midi' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `taskflow_jingle_${label.replace(/[^a-zA-Z0-9]/g, '_')}.mid`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // -------- MELODY PANEL --------
+    const melodyPanel = document.getElementById('melodyPanel');
+    const melodyPanelToggle = document.getElementById('melodyPanelToggle');
+    const melodyPanelArrow = document.getElementById('melodyPanelArrow');
+    const melodyListEl = document.getElementById('melodyList');
+    const melodyListEmpty = document.getElementById('melodyListEmpty');
+
+    melodyPanelToggle.addEventListener('click', () => {
+        melodyPanel.classList.toggle('open');
+        melodyPanelArrow.textContent = melodyPanel.classList.contains('open') ? '▾' : '▸';
+    });
+
+    function renderMelodyPanel() {
+        melodyListEl.innerHTML = '';
+        melodyListEmpty.style.display = melodyHistory.length > 0 ? 'none' : 'block';
+        melodyHistory.forEach((m, i) => {
+            const div = document.createElement('div');
+            div.className = 'melody-item';
+            const timeStr = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            div.innerHTML = `
+                <span class="melody-item-label">${escapeHtml(m.label)} (${timeStr})</span>
+                <button class="melody-save-btn">Save MIDI</button>
+            `;
+            div.querySelector('.melody-save-btn').addEventListener('click', () => {
+                downloadMidi(m.events, m.bpm, m.label);
+            });
+            melodyListEl.appendChild(div);
+        });
+    }
+
+    renderMelodyPanel();
 
     btnAddReminder.addEventListener('click', addReminder);
     reminderTextInput.addEventListener('keydown', (e) => {
